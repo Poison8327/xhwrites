@@ -1,9 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Check, Sparkles, Zap, Heart, BookOpen } from "lucide-react";
+import { Copy, Check, Sparkles, Zap, Heart, BookOpen, LucideIcon } from "lucide-react";
 
-const STYLES = [
+interface StyleOption {
+  id: string;
+  name: string;
+  icon: LucideIcon;
+  desc: string;
+}
+
+const STYLES: StyleOption[] = [
   { id: "zhongcao", name: "种草安利", icon: Sparkles, desc: "适合产品推荐、好物分享" },
   { id: "ganhuo", name: "干货分享", icon: BookOpen, desc: "适合教程、攻略、知识科普" },
   { id: "qinggan", name: "情感共鸣", icon: Heart, desc: "适合故事、感悟、生活记录" },
@@ -19,7 +26,6 @@ export default function Home() {
   const [limitReached, setLimitReached] = useState(false);
 
   useEffect(() => {
-    // 从 localStorage 读取今日使用次数
     const today = new Date().toDateString();
     const savedDate = localStorage.getItem("xhwrites_date");
     const savedCount = localStorage.getItem("xhwrites_count");
@@ -63,7 +69,6 @@ export default function Home() {
 
       setResults(data.results);
 
-      // 更新使用次数
       const newCount = dailyCount + 1;
       setDailyCount(newCount);
       localStorage.setItem("xhwrites_count", newCount.toString());
@@ -84,7 +89,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-pink-50 via-orange-50 to-yellow-50">
-      {/* Header */}
       <header className="gradient-bg text-white py-6 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
@@ -96,9 +100,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Usage Counter */}
         <div className="flex justify-between items-center mb-6">
           <div className="text-sm text-gray-600">
             今日剩余次数：<span className={limitReached ? "text-red-500 font-bold" : "text-pink-500 font-bold"}>{3 - dailyCount}</span> / 3
@@ -110,7 +112,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Input Section */}
         <div className="bg-white rounded-2xl card-shadow p-6 mb-6">
           <label className="block text-gray-700 font-medium mb-3">
             产品/服务描述
@@ -122,14 +123,13 @@ export default function Home() {
             className="input-field min-h-[120px] resize-none"
           />
           
-          {/* Style Selection */}
           <div className="mt-6">
             <label className="block text-gray-700 font-medium mb-3">
               文案风格
             </label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {STYLES.map((s) => {
-                const Icon = s.icon;
+                const IconComponent = s.icon;
                 return (
                   <button
                     key={s.id}
@@ -138,7 +138,7 @@ export default function Home() {
                       style === s.id ? "active" : ""
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
+                    <IconComponent className="w-5 h-5" />
                     <div className="text-left">
                       <div className="font-medium">{s.name}</div>
                       <div className="text-xs text-gray-500">{s.desc}</div>
@@ -149,7 +149,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Generate Button */}
           <button
             onClick={handleGenerate}
             disabled={loading || limitReached}
@@ -169,7 +168,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Results Section */}
         {results.length > 0 && (
           <div className="bg-white rounded-2xl card-shadow p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">
@@ -201,7 +199,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tips */}
         <div className="mt-8 bg-pink-50 rounded-xl p-4 text-sm text-gray-600">
           <p className="font-medium text-pink-600 mb-2">💡 使用技巧</p>
           <ul className="list-disc list-inside space-y-1">
@@ -212,7 +209,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="text-center py-6 text-gray-500 text-sm">
         <p>© 2024 XHWrites.com - 让创作更简单</p>
       </footer>
