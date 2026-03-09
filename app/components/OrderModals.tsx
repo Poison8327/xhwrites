@@ -96,13 +96,32 @@ export function OrderModals({
                   <p className="text-sm text-blue-800"><strong>订单信息</strong><br />订单号：{currentOrder.orderNo}<br />金额：¥{currentOrder.amount}<br />类型：{currentOrder.productType === 'monthly' ? '月度会员' : '年度会员'}</p>
                 </div>
                 
+                {/* 支付宝收款码 */}
+                <div className="bg-white border-2 border-blue-500 rounded-xl p-4 mb-6 text-center">
+                  <p className="text-lg font-bold text-blue-600 mb-3">📱 支付宝扫码支付</p>
+                  <img 
+                    src="/alipay-qr.jpg" 
+                    alt="支付宝收款码" 
+                    className="w-48 h-48 mx-auto rounded-lg shadow-md"
+                  />
+                  <p className="text-sm text-gray-600 mt-3">请使用支付宝扫描上方二维码付款</p>
+                  <p className="text-lg font-bold text-red-500 mt-2">付款金额：¥{currentOrder.amount}</p>
+                </div>
+
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-yellow-800"><strong>支付流程：</strong><br />1. 扫码支付（微信/支付宝）<br />2. 填写支付凭证（交易单号/截图链接）<br />3. 等待管理员确认<br />4. 确认后自动开通会员</p>
+                  <p className="text-sm text-yellow-800"><strong>支付流程：</strong><br />1. 使用支付宝扫码付款<br />2. 填写支付宝交易单号<br />3. 等待管理员确认<br />4. 确认后自动开通会员</p>
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-2">支付凭证</label>
-                  <textarea value={paymentProof} onChange={(e) => setPaymentProof(e.target.value)} placeholder="请填写支付交易单号或截图链接..." className="input-field min-h-[100px] resize-none" />
+                  <label className="block text-gray-700 font-medium mb-2">支付宝交易单号</label>
+                  <input 
+                    type="text" 
+                    value={paymentProof} 
+                    onChange={(e) => setPaymentProof(e.target.value)} 
+                    placeholder="请填写支付宝交易单号（在支付宝账单详情中查看）" 
+                    className="input-field w-full" 
+                  />
+                  <p className="text-xs text-gray-500 mt-1">交易单号示例：2024030912345678901234567890</p>
                 </div>
 
                 <button onClick={onSubmitPayment} disabled={loading || !paymentProof.trim()} className="btn-primary w-full mb-4 disabled:opacity-50">{loading ? "提交中..." : "提交支付凭证"}</button>
