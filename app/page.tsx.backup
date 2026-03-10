@@ -1,0 +1,156 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Copy, Check, Sparkles, Zap, Heart, BookOpen, Crown, X, User, LogOut, FileText } from "lucide-react";
+
+const STYLES = [
+  { id: "zhongcao", name: "种草安利", icon: Sparkles, desc: "适合产品推荐、好物分享" },
+  { id: "ganhuo", name: "干货分享", icon: BookOpen, desc: "适合教程、攻略、知识科普" },
+  { id: "qinggan", name: "情感共鸣", icon: Heart, desc: "适合故事、感悟、生活记录" },
+];
+
+interface UserInfo {
+  id: string;
+  email: string;
+  isMember: boolean;
+  memberExpiry: string | null;
+}
+
+interface Order {
+  id: string;
+  orderNo: string;
+  productType: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+}
+
+export default function Home() {
+  const [product, setProduct] = useState("");
+  const [style, setStyle] = useState("zhongcao");
+  const [results, setResults] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showOrders, setShowOrders] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [dailyCount, setDailyCount] = useState(0);
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+  const [paymentProof, setPaymentProof] = useState("");
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("xhwrites_user");
+    if (savedUser) setUser(JSON.parse(savedUser));
+    const today = new Date().toDateString();
+    const savedDate = localStorage.getItem("xhwrites_date");
+    const savedCount = localStorage.getItem("xhwrites_count");
+    if (savedDate === today && savedCount) setDailyCount(parseInt(savedCount));
+    else { localStorage.setItem("xhwrites_date", today); localStorage.setItem("xhwrites_count", "0"); }
+  }, []);
+
+  const isMember = user?.isMember && user.memberExpiry && new Date(user.memberExpiry) > new Date();
+  const canGenerate = isMember || dailyCount < 3;
+
+  const handleAuth = async () => {
+    if (!email || !password) { alert("请填写邮箱和密码"); return; }
+    setLoading(true);
+    try {
+      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+      const data = await response.json();
+      if (data.error) alert(data.error);
+      else { setUser(data.user); localStorage.setItem("xhwrites_user", JSON.stringify(data.user)); setShowAuth(false); setEmail(""); setPassword(""); alert(isLogin ? "登录成功！" : "注册成功！"); }
+    } catch (error) { alert("操作失败"); } finally { setLoading(false); }
+  };
+
+  const handleLogout = () => { setUser(null); localStorage.removeItem("xhwrites_user"); setUserOrders([]); };
+
+  const handleGenerate = async () => {
+    if (!product.trim()) { alert("请输入产品或服务描述"); return; }
+    if (!canGenerate) { setShowPayment(true); return; }
+    setLoading(true); setResults([]);
+    try {
+      const response = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product: product.trim(), style }) });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      setResults(data.results);
+      if (!isMember) { const newCount = dailyCount + 1; setDailyCount(newCount); localStorage.setItem("xhwrites_count", newCount.toString()); }
+    } catch (error) { alert("生成失败"); } finally { setLoading(false); }
+  };
+
+  const handleCopy = async (text: string, index: number) => { await navigator.clipboard.writeText(text); setCopiedIndex(index); setTimeout(() => setCopiedIndex(null), 2000); };
+
+  const handleCreateOrder = async () => {
+    if (!user) { alert("请先登录"); setShowAuth(true); setShowPayment(false); return; }
+    setLoading(true);
+    try {
+      const response = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: user.id, productType: selectedPlan }) });
+      const data = await response.json();
+      if (data.error) alert(data.error);
+      else { setCurrentOrder(data.order); alert(`订单创建成功！订单号：${data.order.orderNo}`); }
+    } catch (error) { alert("创建订单失败"); } finally { setLoading(false); }
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!currentOrder || !paymentProof.trim()) { alert("请填写支付凭证"); return; }
+    setLoading(true);
+    try {
+      const response = await fetch("/api/orders/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderNo: currentOrder.orderNo, paymentProof: paymentProof.trim() }) });
+      const data = await response.json();
+      if (data.error) alert(data.error);
+      else { alert("支付凭证已提交，请等待管理员确认"); setCurrentOrder(null); setPaymentProof(""); setShowPayment(false); }
+    } catch (error) { alert("提交失败"); } finally { setLoading(false); }
+  };
+
+  const handleGetOrders = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/orders?userId=${user.id}`);
+      const data = await response.json();
+      if (data.orders) { setUserOrders(data.orders); setShowOrders(true); }
+    } catch (error) { alert("获取订单失败"); } finally { setLoading(false); }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return '待支付';
+      case 'paid': return '已支付，待确认';
+      case 'confirmed': return '已确认';
+      case 'cancelled': return '已取消';
+      default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'text-yellow-600';
+      case 'paid': return 'text-blue-600';
+      case 'confirmed': return 'text-green-600';
+      case 'cancelled': return 'text-red-500';
+      default: return 'text-gray-600';
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-orange-50 to-yellow-50">
+      <header className="gradient-bg text-white py-6 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">✨ 小红书文案生成器</h1>
+          <p className="text-white/90 text-lg">一键生成爆款文案，让创作更简单</p>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <div className="text-sm text-gray-600">
+            {user ? (isMember ? <span className="flex items-center gap-2"><Crown className="w-4 h-4 text-yellow-500" /><span className="text-yellow-600 font-bold">{user.email}</span><span className="text-gray-500">(会员至 {user.memberExpiry})</span></span> : <span className="flex items-center gap-2"><User className="w-4 h-4 text-gray-500" /><span>{user.email}</span><span className="text-gray-400">|</span><span>今日剩余：{3 - dailyCount} 次</span></span>) : <>今日剩余次数：<span className={canGenerate ? "text-pink-500 font-bold" : "text-red-500 font-bold"}>{3 - dailyCount}</span> / 3</>}
+          </div>
+          <div className="flex gap-2">
+            {user ? (<>{!isMember && <button onClick={() => setShowPayment(true)} className="btn-primary text-sm py-2 px-4 flex items-center gap-2"><Crown className="w-4 h-4" />升级会员</button>}<button onClick={handleGetOrders} className="btn-secondary text-sm py
